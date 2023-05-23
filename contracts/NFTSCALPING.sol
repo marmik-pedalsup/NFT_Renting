@@ -2,11 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "./IERC4907.sol";
+import "./INFTSCALPING.sol";
 import "./RewardToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ERC4907 is ERC721, IERC4907, Ownable {
+contract NFTSCALPING is ERC721, INFTSCALPING, Ownable {
 /*------------------------------------------------------------------------------------------------------------------------- */
     RewardToken rewardTokens;
 
@@ -16,7 +16,7 @@ contract ERC4907 is ERC721, IERC4907, Ownable {
         address tenant;      // address of user role
         string tier;        // tier name
         uint64 rentedOn;   // the day the nft was rented.
-        uint64 duration;  // duration for each tier,(expires after that)
+        uint64 expiersOn;  // duration for each tier,(expires after that)
         uint256 rewards; // rewards to get per-day, per-tier.
         uint256 rent;   // rent to be paid to rent the NFT, per-day, per-tier.
     }
@@ -39,7 +39,6 @@ contract ERC4907 is ERC721, IERC4907, Ownable {
     mapping (uint256 => string) internal _tierSelected;      //mapping to know which nft is under which tier.
     mapping (uint256 => address) internal _underRent;       // mapping to check which NFT is under rent by which tenant.
     mapping (uint256 => bool) internal _listedForRent;     // mapping to check id nft is listed for rent.
-    mapping (uint256 => uint256) internal _rentAsPerTier; //mapping of tokenId in a tier and rent associated with it.
 /*------------------------------------------------------------------------------------------------------------------------- */
 
     constructor(string memory name_, string memory symbol_, RewardToken _rewardTokens)
@@ -104,7 +103,6 @@ contract ERC4907 is ERC721, IERC4907, Ownable {
                 tierinfo.duration = uint64(_duration * 86400);
                 tierinfo.rewards = _rewards * (10 ** 18);
                 tierinfo.rent = _rent * (10 ** 18);
-                _rentAsPerTier[tokenId] = _rent * 1 ether;
                 break;
             }
             else{
@@ -138,10 +136,15 @@ contract ERC4907 is ERC721, IERC4907, Ownable {
     function detailsOfNFTListedForRent(uint256 tokenId) public view virtual override returns(string memory, uint64, uint256, uint256){
         require(ERC721._exists(tokenId), "The NFT does not exist");
         require(_listedForRent[tokenId], "This token Id is not on listed yet, try another one");
-        TierInfo memory tierinfo = _tierInfo[_tierSelected[tokenId]];
+        TierInfo memory tierinfo = _tiersInfo[_tierSelected[tokenId]];
 
         return(tierinfo.tier, tierinfo.duration, tierinfo.rewards, tierinfo.rent);
 
+    }
+
+    function withdrawEther() public payable onlyOwner virtual override{
+        (bool success, ) = payable(msg.sender).call{value: address(this).balance}("");
+        require(success, "Failed to send ether to the rightful owner");
     }
 
     fallback() external payable{}
@@ -155,8 +158,8 @@ contract ERC4907 is ERC721, IERC4907, Ownable {
         info.tokenId = tokenId;
         info.tenant = tenant;
         info.tier = tierinfo.tier;
-        info.rentedOn = block.timestamp;
-        info.duration = uint64(block.timestamp + tierinfo.duration - 1 days);
+        info.rentedOn = uint64(block.timestamp);
+        info.expiersOn = uint64(block.timestamp + tierinfo.duration - 1 days);
         //Question: What if the user rents the NFT at 23:59:59?
         info.rewards = tierinfo.rewards;
         info.rent = tierinfo.rent;
@@ -165,10 +168,10 @@ contract ERC4907 is ERC721, IERC4907, Ownable {
         _underRent[tokenId] = tenant;
 
         
-        emit UpdateUser(tokenId, tenant, info.duration);
+        emit UpdateUser(tokenId, tenant, info.expiersOn);
     }
 
-    function _removeFromRent(uint257 tokenId) internal 
+    function _removeFromRent(uint256 tokenId) internal 
         {
          UserInfo storage info = _users[tokenId];
 
@@ -176,7 +179,7 @@ contract ERC4907 is ERC721, IERC4907, Ownable {
             info.tenant = address(0);
             info.tier = "";
             info.rentedOn = 0;
-            info.duration = 0;
+            info.expiersOn = 0;
             info.rewards = 0;
             info.rent = 0;          
 
@@ -184,36 +187,36 @@ contract ERC4907 is ERC721, IERC4907, Ownable {
             _listedForRent[tokenId] = true;
             _underRent[tokenId] = address(0);
 
-            emit UpdateUser(tokenId, info.tenant, info.duration);
+            emit UpdateUser(tokenId, info.tenant, info.expiersOn);
 
     }
 
     //This function is used to pay rent, must be called by the person who wants to rent the NFT. Must be called to pay the rent everyday
     function payRent(uint256 tokenId) public payable virtual override{
         require(msg.sender == _underRent[tokenId],"Rent has to be paid by the tenant");
-        require(_user[tokenId].duration >= block.timestamp, "No need to play rent, tenure is over");
-        require(msg.value == _rentAsPerTier[tokenId], "Not enough ETH sent");
-        emit RentPaid(tokenId, _underRent[tokenId], _rentAsPerTier[tokenId]);
+        require(_users[tokenId].expiersOn >= block.timestamp, "No need to play rent, tenure is over");
+        require(msg.value == _users[tokenId].rent, "Not enough ETH sent");
+        emit RentPaid(tokenId, _underRent[tokenId], msg.value);
     }
 
     //This function will remove the user from rent.
     function endTenure(uint256 tokenId) public  virtual override{
-        require(msg.sender == _isApprovedOrOwner(msg.sender,tokenId));
+        require(_isApprovedOrOwner(msg.sender,tokenId), "Not the owner or approved individual");
         _removeFromRent(tokenId);
     }
 
 
     //This function will set the user on rent
-    function setUser(uint256 tokenId, address tenant) public payable virtual override{
+    function RentNFT(uint256 tokenId, address tenant) public payable virtual override{
         //Question: If solidity function cannot execute automatically then, how to set rent payment to happen everyday.
         require(_listedForRent[tokenId], "This NFT is not listed for rent");
         require(_underRent[tokenId] == address(0),"This NFT is rented by someone");
         // require(_isApprovedOrOwner(msg.sender, tokenId), "ERC4907: transfer caller is not owner nor approved");
         
         if(msg.sender == tenant){
-            require(msg.value == _rentAsPerTier[tokenId], "Not enough ETH sent");
+            require(msg.value == _users[tokenId].rent, "Not enough ETH sent");
             _puttingUserOnRent(tokenId, tenant);
-            emit RentPaid(tokenId, tenant, _rentAsPerTier[tokenId]);
+            emit RentPaid(tokenId, tenant, _users[tokenId].rent);
         }
         else{
             if(_isApprovedOrOwner(msg.sender, tokenId)){
@@ -230,15 +233,15 @@ contract ERC4907 is ERC721, IERC4907, Ownable {
     //This function will return the tenant the nft.
     function userOf(uint256 tokenId) public view virtual override returns(address, uint64){
         require(_underRent[tokenId] != address(0), "This NFT is not rented by anyone yet");
-        if( uint256(_users[tokenId].duration) >=  block.timestamp){
-            return  (_users[tokenId].tenant , _users[tokenId].duration);
+        if( uint256(_users[tokenId].expiersOn) >=  block.timestamp){
+            return  (_users[tokenId].tenant , _users[tokenId].expiersOn);
         }
     }
 
     //This is an internal function which updates the values upon expiry.
-    function WhenUserExpires(uint256 tokenId) public virtual override{
-            require(msg.sender == _users[tokenId].tenant || msg.sender == _isApprovedOrOwner(msg.sender, tokenId),"Cannot call this function");
-            require(_users[tokenId].duration <= block.timestamp,"This NFT is still on rent");
+    function TerminateRental(uint256 tokenId) public virtual override{
+            require(msg.sender == _users[tokenId].tenant || _isApprovedOrOwner(msg.sender, tokenId),"Cannot call this function");
+            require(_users[tokenId].expiersOn <= block.timestamp,"This NFT is still on rent");
             _removeFromRent(tokenId);
         }
     //This function will return the current time.
@@ -247,24 +250,24 @@ contract ERC4907 is ERC721, IERC4907, Ownable {
     }
 
     //This function will claim rewards for the tenant, only tenant can call.
-    function claimRewardsForTenant(uint256 tokenId) public view  virtual override{
+    function claimRewardsForTenant(uint256 tokenId) public payable virtual override{
         require(msg.sender == _underRent[tokenId], "Not the tenant of the NFT");  
-        require(_users[tokenId].duration < block.timestamp, "Your tenure has expired, cannot claim rewards");
+        require(_users[tokenId].expiersOn < block.timestamp, "Your tenure has expired, cannot claim rewards");
 
-        if(_users[tokenId].duration >= block.timestamp){
+        if(_users[tokenId].expiersOn >= block.timestamp){
                 uint256 rewards = _users[tokenId].rewards * (_users[tokenId].rentedOn - block.timestamp);
-                _rewardTokens._mintRewards(msg.sender , rewards);
+                rewardTokens._mintRewards(msg.sender , rewards);
         }
     }
 
     //This function will claim rewards for the owner of NFT, only the Owner and Approved user can claim the rewards.
-    function claimRewardsForOnwer(uint256 tokenId) public view virtual override{
+    function claimRewardsForOnwer(uint256 tokenId) public payable virtual override{
         require(_isApprovedOrOwner(msg.sender,tokenId), "You are not the owner/approved person of this NFT");
-        require(_users[tokenId].duration < block.timestamp, "Your NFT has expired, cannot claim rewards");
+        require(_users[tokenId].expiersOn < block.timestamp, "Your NFT has expired, cannot claim rewards");
 
-        if(_users[tokenId].duration >= block.timestamp){
+        if(_users[tokenId].expiersOn >= block.timestamp){
             uint256 rewards = _users[tokenId].rewards * (_users[tokenId].rentedOn - block.timestamp);
-            _rewardToken._mintRewards(ERC721.ownerOf(tokenId), rewards);
+            rewardTokens._mintRewards(ERC721.ownerOf(tokenId), rewards);
         }
 
     }
@@ -272,17 +275,17 @@ contract ERC4907 is ERC721, IERC4907, Ownable {
 
     
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == type(IERC4907).interfaceId || super.supportsInterface(interfaceId);
+        return interfaceId == type(INFTSCALPING).interfaceId || super.supportsInterface(interfaceId);
     }
 
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 tokenId
-    ) internal virtual override{
-        super._beforeTokenTransfer(from, to, tokenId);
+    ) internal virtual{
+        super._beforeTokenTransfer(from, to, tokenId ,1);
 
-        if (from != to && _users[tokenId].user != address(0)) {
+        if (from != to && _users[tokenId].tenant != address(0)) {
             delete _users[tokenId];
             emit UpdateUser(tokenId, address(0), 0);
         }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IERC4907 {
+interface INFTSCALPING {
 
     event UpdateUser(uint256 indexed tokenId, address indexed user, uint64 expires);
 
@@ -22,22 +22,24 @@ interface IERC4907 {
     function putOnRentNFT(uint256 tokenId, string calldata _tier) external;
 
     function detailsOfNFTListedForRent(uint256 tokenId) external view returns(string memory, uint64, uint256, uint256);
-     
+
+    function withdrawEther() external payable; 
+    
     function payRent(uint256 tokenId) external payable;
 
     function endTenure(uint256 tokenId) external;
 
-    function setUser(uint256 tokenId, address tenant) external payable;
+    function RentNFT(uint256 tokenId, address tenant) external payable;
 
     function userOf(uint256 tokenId) external view returns(address, uint64);
 
-    function WhenUserExpires(uint256 tokenId) external;
+    function TerminateRental(uint256 tokenId) external;
 
     function currentTime() external view returns(uint64);
 
-    function claimRewardsForTenant(uint256 tokenId) external view;
+    function claimRewardsForTenant(uint256 tokenId) external payable;
 
-    function claimRewardsForOnwer(uint256 tokenId) external view;
+    function claimRewardsForOnwer(uint256 tokenId) external payable;
 
 
 

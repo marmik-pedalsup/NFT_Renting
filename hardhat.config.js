@@ -7,7 +7,7 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const POLYSCAN_API_KEY = process.env.POLYSCAN_API_KEY;
 
 module.exports = {
-  solidity: "0.8.0",
+  solidity: "0.8.1",
   networks:{
     mumbai:{
       url: ALCHEMY_API_KEY,
