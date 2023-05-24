@@ -6,7 +6,7 @@ import "./INFTSCALPING.sol";
 import "./RewardToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract NFTSCALPING is ERC721, INFTSCALPING, Ownable {
+contract NFTSCALPING is ERC721, INFTSCALPING, Ownable{
 /*------------------------------------------------------------------------------------------------------------------------- */
     RewardToken rewardTokens;
 
@@ -66,10 +66,8 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable {
         return Tiers;
     }
 
-
-
     //This function will add tiers to the Tier array.
-    function addTier(string calldata _tier) public onlyOwner virtual override{
+    function addTier(string calldata _tier) public onlyOwner{
         for(uint i = 0; i < Tiers.length; ++i)
         {
             if(keccak256(abi.encodePacked(_tier))!= keccak256(abi.encodePacked(Tiers[i]))){
@@ -92,7 +90,7 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable {
 
 
     //This function will set the details of the tier.
-    function setTierDetails(string calldata _tier, uint64 _duration, uint256 _rewards, uint256 _rent) public onlyOwner virtual override
+    function setTierDetails(string calldata _tier, uint64 _duration, uint256 _rewards, uint256 _rent) public onlyOwner
     {
         for(uint i = 0; i < Tiers.length; ++i)
         {
@@ -142,7 +140,7 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable {
 
     }
 
-    function withdrawEther() public payable onlyOwner virtual override{
+    function withdrawEther() public payable onlyOwner{
         (bool success, ) = payable(msg.sender).call{value: address(this).balance}("");
         require(success, "Failed to send ether to the rightful owner");
     }
@@ -234,7 +232,10 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable {
     function userOf(uint256 tokenId) public view virtual override returns(address, uint64){
         require(_underRent[tokenId] != address(0), "This NFT is not rented by anyone yet");
         if( uint256(_users[tokenId].expiersOn) >=  block.timestamp){
-            return  (_users[tokenId].tenant , _users[tokenId].expiersOn);
+            return (_users[tokenId].tenant , _users[tokenId].expiersOn);
+        }
+        else{
+            return (address(0), 0);
         }
     }
 
