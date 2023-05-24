@@ -9,32 +9,39 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract RewardToken is ERC20, IRewardToken,Ownable{
 
     address payable public contractOwner;
-    uint256 public cap;
+    uint256 internal cap;
 
     mapping(address => bool) minters;
 
     //The deployer adds the cap of tokens and % of tokens reserved for rewards, the remaining token 
     //will be minted to contract owner.
    constructor(uint256 _cap, uint256 _rewardPercentage) ERC20("Reward Token", "RT") {
+        require(_rewardPercentage <= 100, "Cant mint more than 100%");
         contractOwner = payable(msg.sender);
         cap = _cap * (10 ** decimals());
-        uint256 tokensForOwner = cap*(1 - (_rewardPercentage/100));
+        uint256 tokensForOwner = cap - ((cap*_rewardPercentage)/100);
         _mint(contractOwner , tokensForOwner);
+        minters[msg.sender] = true; // contract owner can also mint with this line of code for other user.
     }
 
-    // To check this with Vijay
-    //     function _mint(address account, uint256 amount) internal virtual override(ERC20Capped) {
-    //     require(ERC20.totalSupply() + amount <= cap(), "ERC20Capped: cap exceeded");
-    //     super._mint(account, amount);
+    //Question: Is it okay to not use this function?
+    // function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override{
+    //     super._beforeTokenTransfer(from, to, amount);
+    //     if(from != address(0) && to != address(0))
+    //     {
+    //         _mintRewards(to, amount);
+    //     }
+        
     // }
 
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override{
-        super._beforeTokenTransfer(from, to, amount);
-        if(from != address(0) && to != address(0))
-        {
-            _mintRewards(to, amount);
-        }
-        
+    //This function will return cap.
+    function Cap() public view virtual override returns(uint256){
+        return cap;
+    }
+
+    //This function will return the supply remaining for rewards.
+    function rewardSupply() public view virtual override returns(uint256){
+        return (Cap() - totalSupply());
     }
 
     //this function will add minter to the mapping so they can mint rewards.
@@ -52,6 +59,7 @@ contract RewardToken is ERC20, IRewardToken,Ownable{
         require(minters[msg.sender], "You cannot mint the tokens because you are not authorized, please contact token owner to get authorized");
         require(totalSupply() + rewards <= cap, "Exceeding the cap, please check!");
         _mint(_rewardsReceiver, rewards);
+        emit RewardsMined(_rewardsReceiver, rewards);
     }
 
 }
