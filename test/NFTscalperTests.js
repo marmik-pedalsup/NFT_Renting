@@ -56,7 +56,7 @@ describe("Scalper NFT", function(){
         .to.not.be.reverted;
 
         const tx_2 = await NFTscalperContract.connect(accounts[DEPLOYER])
-        .setTierDetails("TIER_1",10,10,3);
+        .setTierDetails("TIER_1",10,1,3);
 
         await tx_2.wait();
 
@@ -80,7 +80,7 @@ describe("Scalper NFT", function(){
         .to.not.be.reverted;
 
         const tx_2 = await NFTscalperContract.connect(accounts[DEPLOYER])
-        .setTierDetails("TIER_1",10,10,3);
+        .setTierDetails("TIER_1",10,1,3);
 
         await tx_2.wait();
 
@@ -109,7 +109,7 @@ describe("Scalper NFT", function(){
         .to.not.be.reverted;
 
         const tx_2 = await NFTscalperContract.connect(accounts[DEPLOYER])
-        .setTierDetails("TIER_1",10,10,3);
+        .setTierDetails("TIER_1",10,1,3);
 
         await tx_2.wait();
 
@@ -123,7 +123,7 @@ describe("Scalper NFT", function(){
         expect(details[0]).to.equal(tokenId);
         expect(details[1]).to.equal("TIER_1");
         expect(details[2]).to.equal(10*86400);
-        expect(details[3]).to.equal(ethers.utils.parseEther("10"));
+        expect(details[3]).to.equal(ethers.utils.parseEther("1"));
         expect(details[4]).to.equal(ethers.utils.parseEther("3"));
 
     });
@@ -144,7 +144,7 @@ describe("Scalper NFT", function(){
         .to.not.be.reverted;
 
         const tx_2 = await NFTscalperContract.connect(accounts[DEPLOYER])
-        .setTierDetails("TIER_1",10,10,3);
+        .setTierDetails("TIER_1",10,1,3);
 
         await tx_2.wait();
 
@@ -159,14 +159,13 @@ describe("Scalper NFT", function(){
         .to.emit(NFTscalperContract,"RentPaid")
         .withArgs(tokenId, accounts[TENANT].address,ethers.utils.parseEther("3"));
 
-        //Getting a delay of 1 second. same error when tested
-
+    
         // const currentTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
 
         // await expect(NFTscalperContract.connect(accounts[TENANT])
         // .RentNFT(tokenId, accounts[TENANT].address, {value : ethers.utils.parseEther("3")}))
         // .to.emit(NFTscalperContract,"UpdateUser")
-        // .withArgs(tokenId, accounts[TENANT].address, (currentTimestamp + (10*86400)));
+        // .withArgs(tokenId, accounts[TENANT].address, (currentTimestamp + (10*86400) + 1));
 
 
     });
@@ -186,7 +185,7 @@ describe("Scalper NFT", function(){
         .to.not.be.reverted;
 
         const tx_2 = await NFTscalperContract.connect(accounts[DEPLOYER])
-        .setTierDetails("TIER_1",10,10,3);
+        .setTierDetails("TIER_1",10,1,3);
 
         await tx_2.wait();
 
@@ -205,7 +204,7 @@ describe("Scalper NFT", function(){
         const currentTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
         
         expect(details[0]).to.equal(accounts[TENANT].address);
-        expect(details[1]).to.equal(currentTimestamp + (10*86400)); // This test is passing, but when the time stamp is checked it shows a time which is not today's time.
+        expect(details[1]).to.equal(currentTimestamp + (10*86400));
     });
 
     it("Should return 'This NFT is available for rent' when tenure has expired.",
@@ -224,7 +223,7 @@ describe("Scalper NFT", function(){
         .to.not.be.reverted;
 
         const tx_2 = await NFTscalperContract.connect(accounts[DEPLOYER])
-        .setTierDetails("TIER_1",10,10,3);
+        .setTierDetails("TIER_1",10,1,3);
 
         await tx_2.wait();
 
@@ -246,47 +245,7 @@ describe("Scalper NFT", function(){
         .userOf(tokenId)).to.be.revertedWith("This NFT is available for rent");
     });
 
-    it("Should let owner of the NFT add the tenant without any ETH payment",
-     async function(){
-
-        const tx_1 = await NFTscalperContract.connect(accounts[USER])
-        .mint();
-        
-        await tx_1.wait();
-
-        const tokenId = (await NFTscalperContract.connect(accounts[USER])
-        .getCurrentMintedTokenId());
-
-        await expect(NFTscalperContract.connect(accounts[DEPLOYER])
-        .addTier("TIER_1"))
-        .to.not.be.reverted;
-
-        const tx_2 = await NFTscalperContract.connect(accounts[DEPLOYER])
-        .setTierDetails("TIER_1",10,10,3);
-
-        await tx_2.wait();
-
-        await expect(NFTscalperContract.connect(accounts[USER])
-        .makeNFTAvailableForRent(tokenId,"TIER_1"))
-        .to.not.be.reverted;
-
-        const currentTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
-        const targetTimestamp = currentTimestamp + (10*86400);
-
-        // await ethers.provider.send('evm_setNextBlockTimestamp', [targetTimestamp]);
-        // await ethers.provider.send('evm_mine');
-
-
-        await expect(NFTscalperContract.connect(accounts[USER])
-        .RentNFT(tokenId, accounts[TENANT].address)) //Displays 'Not the appropriate user.' for non holders and renters.
-        .to.emit(NFTscalperContract,"UpdateUser")
-        .withArgs(tokenId, accounts[TENANT].address,currentTimestamp + (10*86400) + 1);
-
-        //Here also the same case, there is a delay of 1 second.
-    });
-
-
-    it.only("Should terminate the renting process when time limit has reached",
+   it("Should display the 'This NFT is still on rent' when the current time is less than the expiry time.",
     async function(){
 
         const tx_1 = await NFTscalperContract.connect(accounts[USER])
@@ -302,7 +261,7 @@ describe("Scalper NFT", function(){
         .to.not.be.reverted;
 
         const tx_2 = await NFTscalperContract.connect(accounts[DEPLOYER])
-        .setTierDetails("TIER_1",10,10,3);
+        .setTierDetails("TIER_1",10,1,3);
 
         await tx_2.wait();
 
@@ -315,20 +274,103 @@ describe("Scalper NFT", function(){
         .to.emit(NFTscalperContract,"RentPaid")
         .withArgs(tokenId, accounts[TENANT].address,ethers.utils.parseEther("3"));
 
-        const block = await ethers.provider.getBlock('latest');
-
-        const timestamp = block.timestamp;
-        // console.log('Block Timestamp:', timestamp);
-
-        // const targetTimestamp = timestamp + (10*86400) + 1;
-        // console.log(targetTimestamp);
-        const a = await ethers.provider.send('evm_increaseTime', [ timestamp + 864001]);
+        async function advanceTimeAndBlock(timestamp) {
+        await ethers.provider.send('evm_increaseTime', [timestamp]);
         await ethers.provider.send('evm_mine');
+        }
+
+        const futureTime = (10*86400) -1 ;
+
+        await advanceTimeAndBlock(futureTime);  
 
         await expect(NFTscalperContract.connect(accounts[USER])
         .TerminateRental(tokenId)).to.be.revertedWith("This NFT is still on rent.");
 
     })
+    it("Should terminate the rental when the time limit has reached.",
+    async function(){
+
+        const tx_1 = await NFTscalperContract.connect(accounts[USER])
+        .mint();
+        
+        await tx_1.wait();
+
+        const tokenId = (await NFTscalperContract.connect(accounts[USER])
+        .getCurrentMintedTokenId());
+
+        await expect(NFTscalperContract.connect(accounts[DEPLOYER])
+        .addTier("TIER_1"))
+        .to.not.be.reverted;
+
+        const tx_2 = await NFTscalperContract.connect(accounts[DEPLOYER])
+        .setTierDetails("TIER_1",10,1,3);
+
+        await tx_2.wait();
+
+        await expect(NFTscalperContract.connect(accounts[USER])
+        .makeNFTAvailableForRent(tokenId,"TIER_1"))
+        .to.not.be.reverted;
+
+        await expect(NFTscalperContract.connect(accounts[TENANT])
+        .RentNFT(tokenId, accounts[TENANT].address, {value : ethers.utils.parseEther("3")}))
+        .to.emit(NFTscalperContract,"RentPaid")
+        .withArgs(tokenId, accounts[TENANT].address,ethers.utils.parseEther("3"));
+
+        async function advanceTimeAndBlock(timestamp) {
+        await ethers.provider.send('evm_increaseTime', [timestamp]);
+        await ethers.provider.send('evm_mine');
+        }
+
+        const futureTime = (10*86400) + 1;
+
+        await advanceTimeAndBlock(futureTime);  
+
+        await expect(NFTscalperContract.connect(accounts[USER])
+        .TerminateRental(tokenId)).to.not.be.reverted;
+
+    });
+
+    // it.only("Should let the minter mint the rewards", 
+    // async function(){
+
+
+    // Testing passes when addMinted() (in rewards token) is not used.
+    //     //Testing for tenant as the logic for the NFT owner is same.
+    //     const tx_1 = await NFTscalperContract.connect(accounts[USER])
+    //     .mint();
+        
+    //     await tx_1.wait();
+
+    //     const tokenId = (await NFTscalperContract.connect(accounts[USER])
+    //     .getCurrentMintedTokenId());
+
+    //     await expect(NFTscalperContract.connect(accounts[DEPLOYER])
+    //     .addTier("TIER_1"))
+    //     .to.not.be.reverted;
+
+    //     const tx_2 = await NFTscalperContract.connect(accounts[DEPLOYER])
+    //     .setTierDetails("TIER_1",10,1,3);
+
+    //     await tx_2.wait();
+
+    //     await expect(NFTscalperContract.connect(accounts[USER])
+    //     .makeNFTAvailableForRent(tokenId,"TIER_1"))
+    //     .to.not.be.reverted;
+
+    //     await expect(NFTscalperContract.connect(accounts[TENANT])
+    //     .RentNFT(tokenId, accounts[TENANT].address, {value : ethers.utils.parseEther("3")}))
+    //     .to.emit(NFTscalperContract,"RentPaid")
+    //     .withArgs(tokenId, accounts[TENANT].address,ethers.utils.parseEther("3"));
+
+    //     expect (await rewardContract.connect(accounts[DEPLOYER])
+    //     .rewardSupply()).to.be.equal(ethers.utils.parseEther("10"));
+
+       // // await expect(rewardContract.connect(accounts[DEPLOYER])    
+      //  // .addMinter(accounts[TENANT].address)).to.not.be.reverted;
+
+    //     await expect(NFTscalperContract.connect(accounts[TENANT])
+    //     .claimRewardsForTenant(tokenId)).to.not.be.reverted;
+    // });
 
     
 

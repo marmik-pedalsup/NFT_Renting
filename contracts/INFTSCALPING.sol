@@ -14,10 +14,7 @@ interface INFTSCALPING {
     function getTier() external view returns(string[] memory);
 
     // function addTier(string calldata _tier) external; this is onlyOwner
-
-    //use calldata for display like view visibility.
-    //use memory if you want to make some edits.
-
+    
     function getTierDetails(string calldata _tier) external view returns(string memory, uint64, uint256, uint256);
 
     // function setTierDetails(string calldata _tier, uint64 _duration, uint256 _rewards, uint256 _rent) external; this function is onlyOwner
@@ -40,9 +37,9 @@ interface INFTSCALPING {
 
     function currentTime() external view returns(uint64);
 
-    function claimRewardsForTenant(uint256 tokenId) external payable;
+    function claimRewardsForTenant(uint256 tokenId) external;
 
-    function claimRewardsForOnwer(uint256 tokenId) external payable;
+    function claimRewardsForOnwer(uint256 tokenId) external;
 
 
 

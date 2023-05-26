@@ -5,9 +5,17 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "./INFTSCALPING.sol";
 import "./RewardToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "hardhat/console.sol";
+
+    /// @notice This contact has all the functions related to renting an NFT
+    /// @dev all functions are implemented.
+
 
 contract NFTSCALPING is ERC721, INFTSCALPING, Ownable{
 /*------------------------------------------------------------------------------------------------------------------------- */
+    
+    
+
     RewardToken rewardTokens;
 
     struct UserInfo 
@@ -47,35 +55,35 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable{
 
      ERC721(name_, symbol_)
      {
-        rewardTokens = _rewardTokens; // this is the alias to the token contract.
+        rewardTokens = _rewardTokens;
      }
 
     
     
-    //function to check who has rented the NFT
+    /// @dev will return address of the renter. 
     function checkWhoRentsNFT(uint256 tokenId) public view  virtual override returns(address){
         return(_underRent[tokenId]);
     }
 
-    //check if the NFT is listed for rent
+    /// @dev check if the NFT is listed for rent
     function checkListedForRent(uint256 tokenId) public view virtual override returns(bool){
         return(_listedForRent[tokenId]);
     }
 
 
-    //This function is display all tiers available.
+    /// @dev this function is display all tiers available.
     function getTier() public view virtual override returns(string[] memory){
         return Tiers;
     }
 
-    //This function will add tiers to the Tier array.
+    /// @dev Ttis function will add tiers to the Tier array.
     function addTier(string memory _tier) public onlyOwner{
         require(!_tierAdded[_tier], "Tier is already added.");
         Tiers.push(_tier);
         _tierAdded[_tier] = true;
     }
 
-    //This function will display the details of the tier, must input the name of the tier,
+    /// @dev this function will display the details of the tier, must input the name of the tier,
     function getTierDetails(string memory _tier) public view virtual override returns(string memory, uint64, uint256, uint256){
         require(_tierSet[_tier],"This tier is not yet set by the owner, cannot view tier's details.");
         TierInfo memory tierinfo = _tiersInfo[_tier];
@@ -84,7 +92,7 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable{
     }
 
 
-    //This function will set the details of the tier.
+    /// @dev this function will set the details of the tier.
     function setTierDetails(string calldata _tier, uint64 _duration, uint256 _rewards, uint256 _rent) public onlyOwner{
             require(_rewards * 1 ether <= rewardTokens.rewardSupply(), "Cannot be more than rewards supply");
             require(_tierAdded[_tier], "To set details for this tier, the tier must be first added to the list of tiers.");
@@ -100,7 +108,7 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable{
             _tierSet[_tier] = true;
     }
 
-    //This function will put the nft on rent, takes input from user, NFT id and tier name.
+    /// @dev this function will put the nft on rent, takes input from user, NFT id and tier name.
     function makeNFTAvailableForRent(uint256 tokenId, string calldata _tier) public virtual override{
         require(ERC721._exists(tokenId), "The NFT does not exist.");
         require(_tierSet[_tier], "This tier has no specification.");
@@ -112,7 +120,7 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable{
         _tierSelected[tokenId] = _tier;
     }
 
-    //This function will display the details of NFTs on rent. 
+    /// @dev this function will display the details of NFTs on rent. 
     function detailsOfNFTListedForRent(uint256 tokenId) public view virtual override returns(uint256, string memory, uint64, uint256, uint256){
         require(ERC721._exists(tokenId), "The NFT does not exist.");
         require(_listedForRent[tokenId], "This token Id is not listed for rent yet, try another one.");
@@ -127,8 +135,7 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable{
         require(success, "Failed to send ether to the rightful owner.");
     }
 
-    fallback() external payable{}
-    receive() external payable{}
+    /// @dev this is an internal function which will set the tenant of the NFT, this function is called by RentNFT()
 
     function _puttingUserOnRent(uint256 tokenId, address tenant) internal{
 
@@ -148,6 +155,7 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable{
         _underRent[tokenId] = tenant;
     }
 
+    /// @dev this internal will remove the tenant.
     function _removeFromRent(uint256 tokenId) internal 
         {
          UserInfo storage info = _users[tokenId];
@@ -160,20 +168,19 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable{
             info.rewards = 0;
             info.rent = 0;          
 
-
             _listedForRent[tokenId] = true;
             _underRent[tokenId] = address(0);
     }
 
-    //This function is used to pay rent, must be called by the person who wants to rent the NFT. Must be called to pay the rent everyday
+    /// @dev this function is used to pay rent, must be called by the person who wants to rent the NFT. Must be called to pay the rent everyday
     function payRent(uint256 tokenId) public payable virtual override{
         require(msg.sender == _underRent[tokenId],"Rent has to be paid by the tenant.");
-        require(_users[tokenId].expiersOn >= block.timestamp, "No need to play rent, tenure is over.");
+        require(_users[tokenId].expiersOn > block.timestamp, "No need to pay rent, tenure is over.");
         require(msg.value == _users[tokenId].rent, "Not correct ETH sent.");
         emit RentPaid(tokenId, msg.sender, msg.value);
     }
 
-    //This function will remove the user from rent.
+    /// @dev this function will remove the user from rent.
     function forceEndTenure(uint256 tokenId) public  virtual override{
         require(_isApprovedOrOwner(msg.sender,tokenId), "Not the owner or approved individual.");
         _removeFromRent(tokenId);
@@ -181,74 +188,72 @@ contract NFTSCALPING is ERC721, INFTSCALPING, Ownable{
     }
 
 
-    //This function will let the user rent the NFT.
+    /// @dev this function will let the user rent the NFT.
     function RentNFT(uint256 tokenId, address tenant) public payable virtual override{
-        //Question: If solidity function cannot execute automatically then, how to set rent payment to happen everyday.
         require(ERC721._exists(tokenId),"This NFT does not exist.");
         require(_listedForRent[tokenId], "This NFT is not listed for rent");
-        require(_underRent[tokenId] == address(0),"This NFT is rented by someone.");
-        // require(_isApprovedOrOwner(msg.sender, tokenId), "ERC4907: transfer caller is not owner nor approved");
-        
+        require(_underRent[tokenId] == address(0),"This NFT is rented by someone.");        
         if(msg.sender == tenant){
             _puttingUserOnRent(tokenId, tenant);
             payRent(tokenId);
             emit UpdateUser(tokenId, tenant, _users[tokenId].expiersOn);
         }
         else{
-            if(_isApprovedOrOwner(msg.sender, tokenId)){
-                _puttingUserOnRent(tokenId, tenant);
-                emit UpdateUser(tokenId, tenant, _users[tokenId].expiersOn);
-            }
-            else{
                 revert("Not the appropriate user.");
             }
         }
 
-        
-    }
-
-    //This function will return the tenant of the NFT.
+    ///@dev this function will return the tenant of the NFT.
     function userOf(uint256 tokenId) public view virtual override returns(address, uint64){
         require(_underRent[tokenId] != address(0), "This NFT is available for rent");
         return (_users[tokenId].tenant , _users[tokenId].expiersOn);
     }
 
-    //This is function which updates the values upon expiry.
+    /// @dev this is function which updates the values upon expiry.
     function TerminateRental(uint256 tokenId) public virtual override{
             require(_isApprovedOrOwner(msg.sender, tokenId),"Cannot call this function.");
             require(_users[tokenId].expiersOn < block.timestamp,"This NFT is still on rent.");
             _removeFromRent(tokenId);
         }
-    //This function will return the current time.
+    /// @dev this function will return the current time.
     function currentTime() public view virtual override returns(uint64){
         return uint64(block.timestamp);
     }
 
-    //This function will claim rewards for the tenant, only tenant can call.
-    function claimRewardsForTenant(uint256 tokenId) public payable virtual override{
+    ///@dev this function will claim rewards for the tenant, only tenant can call.
+    function claimRewardsForTenant(uint256 tokenId) public virtual override{
         require(msg.sender == _underRent[tokenId], "Not the tenant of the NFT.");  
-        require(_users[tokenId].expiersOn < block.timestamp, "Your tenure has expired, cannot claim rewards.");
+        require(_users[tokenId].expiersOn > block.timestamp, "Your tenure has expired, cannot claim rewards.");
 
-        if(_users[tokenId].expiersOn >= block.timestamp){
-                uint256 rewards = _users[tokenId].rewards * (_users[tokenId].rentedOn - block.timestamp);
-                rewardTokens._mintRewards(msg.sender , rewards);
+        console.log(_users[tokenId].expiersOn);
+        console.log(_users[tokenId].rewards);
+
+        uint256 rewards = (block.timestamp)*(_users[tokenId].rewards) / 10000 ether;
+
+        if(rewards <= rewardTokens.rewardSupply()){
+        rewardTokens._mintRewards(msg.sender , rewards);
+        }
+        else{
+            revert("You cannot mint rewards beacuse your renting period is over.");
         }
     }
 
-    //This function will claim rewards for the owner of NFT, only the Owner and Approved user can claim the rewards.
-    function claimRewardsForOnwer(uint256 tokenId) public payable virtual override{
+    /// @dev this function will claim rewards for the owner of NFT, only the Owner and Approved user can claim the rewards.
+    function claimRewardsForOnwer(uint256 tokenId) public virtual override{
         require(_isApprovedOrOwner(msg.sender,tokenId), "You are not the owner/approved person of this NFT.");
-        require(_users[tokenId].expiersOn < block.timestamp, "Your NFT has expired, cannot claim rewards.");
+        require(_users[tokenId].expiersOn > block.timestamp, "Your NFT has rent period is over, cannot claim rewards.");
 
-        if(_users[tokenId].expiersOn >= block.timestamp){
-            uint256 rewards = _users[tokenId].rewards * (_users[tokenId].rentedOn - block.timestamp);
+        uint256 rewards = (block.timestamp)*(_users[tokenId].rewards) / 10000 ether;
+        
+        if(rewards <= rewardTokens.rewardSupply())
+        {
             rewardTokens._mintRewards(ERC721.ownerOf(tokenId), rewards);
         }
-
+        else{
+            revert("You cannot mint rewards beacuse your renting period is over.");
+        }
     }
 
-
-    
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return interfaceId == type(INFTSCALPING).interfaceId || super.supportsInterface(interfaceId);
     }
