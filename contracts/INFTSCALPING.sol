@@ -15,19 +15,22 @@ interface INFTSCALPING {
 
     // function addTier(string calldata _tier) external; this is onlyOwner
 
+    //use calldata for display like view visibility.
+    //use memory if you want to make some edits.
+
     function getTierDetails(string calldata _tier) external view returns(string memory, uint64, uint256, uint256);
 
     // function setTierDetails(string calldata _tier, uint64 _duration, uint256 _rewards, uint256 _rent) external; this function is onlyOwner
 
-    function putOnRentNFT(uint256 tokenId, string calldata _tier) external;
+    function makeNFTAvailableForRent(uint256 tokenId, string calldata _tier) external;
 
-    function detailsOfNFTListedForRent(uint256 tokenId) external view returns(string memory, uint64, uint256, uint256);
+    function detailsOfNFTListedForRent(uint256 tokenId) external view returns(uint256,string memory, uint64, uint256, uint256);
 
     // function withdrawEther() external payable; this function is onlyOwner.
     
     function payRent(uint256 tokenId) external payable;
 
-    function endTenure(uint256 tokenId) external;
+    function forceEndTenure(uint256 tokenId) external;
 
     function RentNFT(uint256 tokenId, address tenant) external payable;
 

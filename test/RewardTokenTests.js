@@ -19,6 +19,14 @@ describe("Reward Token" , function () {
         await contract.deployed();
     });
 
+    it("Should have the correct token name i.e Reward Token", async function(){
+        expect(await contract.name()).to.equal("Reward Token");
+    });
+
+    it("Should have the correct token symbol i.e RT", async function(){
+        expect(await contract.symbol()).to.equal("RT");
+    });
+
     it("Should have correct cap tokens",
     async function () {
         expect(await contract.Cap()).to.equal(ethers.utils.parseEther("100"));
@@ -37,7 +45,7 @@ describe("Reward Token" , function () {
     });
 
 
-    it("Should allow only the owner to add the minter, rejecting the caller if not owner", 
+    it("Should allow only the owner to add the minter, reverting the caller if not owner", 
     async function (){
         await expect(contract.connect(accounts[NOT_DEPLOYER])
             .addMinter(accounts[USER].address))
@@ -57,7 +65,7 @@ describe("Reward Token" , function () {
     async function(){
         await expect(contract.connect(accounts[USER])
         ._mintRewards(accounts[USER].address, ethers.utils.parseEther("1")))
-        .to.be.revertedWith("You cannot mint the tokens because you are not authorized, please contact token owner to get authorized");
+        .to.be.revertedWith("You cannot mint the tokens because you are not authorized, please contact token owner to get authorized.");
     });
 
 
@@ -76,7 +84,7 @@ describe("Reward Token" , function () {
         await expect(contract.connect(accounts[DEPLOYER])
         .addMinter(accounts[USER].address)).to.be.not.reverted;
 
-        expect(await contract.connect(accounts[USER])
+        await expect(contract.connect(accounts[USER])
         ._mintRewards(accounts[USER].address, ethers.utils.parseEther("1")))
         .to.emit(contract,"RewardsMined")
         .withArgs(accounts[USER].address, ethers.utils.parseEther("1"));

@@ -56,7 +56,7 @@ contract RewardToken is ERC20, IRewardToken,Ownable{
     //How to do it without importing NFTSCALPING.
 
     function _mintRewards(address _rewardsReceiver, uint256 rewards) public virtual override{
-        require(minters[msg.sender], "You cannot mint the tokens because you are not authorized, please contact token owner to get authorized");
+        require(minters[msg.sender], "You cannot mint the tokens because you are not authorized, please contact token owner to get authorized.");
         require(totalSupply() + rewards <= cap, "Exceeding the cap, please check!");
         _mint(_rewardsReceiver, rewards);
         emit RewardsMined(_rewardsReceiver, rewards);

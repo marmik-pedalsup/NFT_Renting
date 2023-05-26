@@ -8,12 +8,20 @@ contract ScalperNFT is NFTSCALPING {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
+    uint256 internal newTokenId; //added for testing...
+
     constructor(RewardToken _rewardTokens) NFTSCALPING("RentableNFTs", "RN", _rewardTokens) {}
 
     function mint() public {
-    _tokenIds.increment();
-    uint256 newTokenId = _tokenIds.current();
-    _safeMint(msg.sender, newTokenId);
+      _tokenIds.increment();
+      newTokenId = _tokenIds.current();
+      ERC721._safeMint(msg.sender, newTokenId);
+  }
+
+
+  //added this for testing.... can be removed later.
+  function getCurrentMintedTokenId() public view returns(uint256){
+    return newTokenId;
   }
 
   function set(uint256 _tokenId) public {
@@ -23,9 +31,4 @@ contract ScalperNFT is NFTSCALPING {
       revert("This token is still on rent");
     }
   }
-
-  
-
-
-
 }
